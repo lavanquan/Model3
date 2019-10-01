@@ -200,7 +200,7 @@ def getRound():
         w = getWeightLinearPrograming3(E_now, 0.5)
         #w = getWeightLinearPrograming4(E_now)
         #print w
-        tmp = getCharge(E_mc_now + temp_T * e_mc - sum(E_move), w)
+        tmp = getCharge(E_mc_now + temp_T * e_mc, w)
         x_not_zero = [(index, item) for index, item in enumerate(tmp) if item > 0]
         u_first, _ = x_not_zero[0]
         eNode = min([temp_E[j] - time_move[-1][u_first] * e[j] for j, _ in enumerate(node_pos)])
@@ -275,12 +275,13 @@ f = open("Greedy_LP3_lifetime.csv", mode="w")
 header = ["Bo Du Lieu", "Co Sac", "Khong Sac"]
 writer = csv.DictWriter(f, fieldnames=header)
 writer.writeheader()
-while index < 25:
+while index < 1:
     if index == 18:
         index = index + 1
         continue
     print "Data Set ", index
     getData(file_name="data.csv", index=index)
+
     charge = [[charging(node, pos) for u, pos in enumerate(charge_pos)] for j, node in enumerate(node_pos)]
     # do chenh lech nang luong cua moi sensor j khi MC dung sac tai vi tri u
     delta = [[charge[j][u] - e[j] for u, _ in enumerate(charge_pos)] for j, _ in enumerate(node_pos)]

@@ -7,6 +7,7 @@ from ast import literal_eval
 from multiprocessing import cpu_count, Process, Pipe
 from pulp import *
 import csv
+import time
 
 node_pos = [(10,10),(30,30),(50,50),(70,70),(90,90),
            (10,30),(30,10),(30,50),(50,30),(50,70)]
@@ -546,17 +547,19 @@ def genetic(start, end, pc, pm, m_ran, m_uni, w, connection):
 
 def evolution(maxIterator, pc, pm, m_ran, m_uni, w):
     global population
+    bestFitness = 0.0
+    nbIte = 0
     t = 0
-    while t < maxIterator:
-        print t
-        count = 0
+    while t < maxIterator and nbIte < 200:
+        #print "t = ", t, "Fitness = ", population[0]["fitness"]
+        count = 0 # dem so lan mutation
         nproc = cpu_count()
         process = []
         connection = []
         for pid in range(nproc):
             connection.append(Pipe())
         for pid in range(nproc):
-            pro = Process(target=genetic, args=(5 * pid, 5 * (pid + 1), pc, pm, m_ran, m_uni, w, connection[pid][1]))
+            pro = Process(target=genetic, args=(10 * pid, 10 * (pid + 1), pc, pm, m_ran, m_uni, w, connection[pid][1]))
             process.append(pro)
             pro.start()
         for pid in range(nproc):
@@ -566,6 +569,11 @@ def evolution(maxIterator, pc, pm, m_ran, m_uni, w):
             process[pid].join()
         try:
             population = selectionBest(population)
+            if population[0]["fitness"] - bestFitness >= 1:
+                bestFitness = population[0]["fitness"]
+                nbIte = 0
+            else:
+                nbIte = nbIte + 1
         except:
             print population
             break
@@ -606,47 +614,59 @@ def test(indi):
         print "E_mc = ", round(E_mc_now, 2), "min E = ", round(min(E_now), 2), "max E = ", round(max(E_now), 2)
 
 # main task
-index = 17
+index = 0
 
 f = open("temp.csv", mode="w")
 header = ["Bo Du Lieu", "Co Sac", "Khong Sac"]
 writer = csv.DictWriter(f, fieldnames=header)
 writer.writeheader()
 
-while index < 18:
-    if index == 18:
-        index = index + 1
-        continue
+while index < 1:
     print "Data Set ", index
-    getData(file_name="data.csv", index=index)
-    population_size = 60
-    charge = [[charging(node, pos) for u, pos in enumerate(charge_pos)] for j, node in enumerate(node_pos)]
-    delta = [[charge[j][u] - e[j] for u, _ in enumerate(charge_pos)] for j, _ in enumerate(node_pos)]
-    #print max(charge)
-    #print max(e)
-    w = getWeightLinearPrograming()
-    population = [individual(w=w, p_ran=0.5, p_uni=0.5) for _ in range(population_size)]
-    indi = evolution(maxIterator=100, pc=0.8, pm=0.5, m_ran=0.5, m_uni=0.5, w=w)
+
+    file_name = "GA/DataSet" + str(index) + ".csv"
+    f = open(file_name, mode="w")
+    header = ["Lan Chay", "Time", "Co Sac", "Khong Sac"]
+    writer = csv.DictWriter(f, fieldnames=header)
+    writer.writeheader()
+
+    sum_lifetime = 0.0
+    sum_time = 0.0
+    for idRun in range(10):
+        start_time = time.time()
+
+        random.seed(idRun)
+        getData(file_name="data.csv", index=index)
+        population_size = 10 * cpu_count()
+        charge = [[charging(node, pos) for u, pos in enumerate(charge_pos)] for j, node in enumerate(node_pos)]
+        delta = [[charge[j][u] - e[j] for u, _ in enumerate(charge_pos)] for j, _ in enumerate(node_pos)]
+        #print max(charge)
+        #print max(e)
+        w = getWeightLinearPrograming()
+        population = [individual(w=w, p_ran=0.5, p_uni=0.5) for _ in range(population_size)]
+        indi = evolution(maxIterator=5000, pc=0.8, pm=0.5, m_ran=0.5, m_uni=0.5, w=w)
+
+        end_time = time.time()
+        sum_lifetime = sum_lifetime + indi["fitness"]
+        sum_time = sum_time + end_time - start_time
+        # write to file
+        row = {}
+        row["Lan Chay"] = "No." + str(idRun)
+        row["Time"] = end_time - start_time
+        row["Co Sac"] = indi["fitness"]
+        row["Khong Sac"] = min([E[j] / e[j] for j, _ in enumerate(node_pos)])
+        writer.writerow(row)
+
+        idRun = idRun + 1
 
     row = {}
-    row["Bo Du Lieu"] = "No." + str(index)
-    row["Co Sac"] = indi["fitness"]
+    row["Lan Chay"] = "Average"
+    row["Time"] = sum_time / 10.0
+    row["Co Sac"] = sum_lifetime / 10.0
     row["Khong Sac"] = min([E[j] / e[j] for j, _ in enumerate(node_pos)])
     writer.writerow(row)
+    f.close()
     print "Done Data Set ", index
     index = index + 1
 
-f.close()
 print "Done All"
-
-"""print round(indi["fitness"]), round(indi["remain"])
-test(indi)
-print max(indi["gen"])
-for item in indi["T"]:
-    print item,
-print
-for item in indi["gen"]:
-    for tmp in item:
-        if tmp > 0:
-            print round(tmp, 1),
-    print"""
