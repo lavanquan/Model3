@@ -7,6 +7,7 @@ from ast import literal_eval
 from sklearn import linear_model
 from pulp import *
 import csv
+import time as tm
 
 node_pos = [(10,10),(30,30),(50,50),(70,70),(90,90),
            (10,30),(30,10),(30,50),(50,30),(50,70)]
@@ -242,7 +243,7 @@ def getRound():
                     E_now = temp_E
             gen.append(x)
             if not isStop:
-                u_last, _ = x[-1]
+                u_last, _ = x_not_zero[-1]
                 E_mc_now = E_mc_now - time_move[-1][u_last] * e_move
                 E_now = [E_now[j] - time_move[-1][u_last] * e[j] for j, _ in enumerate(node_pos)]
             else:
@@ -268,17 +269,63 @@ def get_life_time(T, gen, remain):
     life_time += remain
     return life_time
 
+def countNodeDead(E_now):
+    temp = [item for item in E_now if item > 0]
+    return len(temp)
+
+def getNodeDead():
+    E_now = E
+    E_mc_now = E_mc
+    list_node_dead = []
+    time_label = 0
+    t = 0
+    while countNodeDead(E_now) > 0.91 * numNode:
+        #print "circle = ", t, "energy = ", min(E_now), max(E_now)
+        t += 1
+        # temp_T, temp_E: cac gia tri nang luong cua sensor va MC trong truong hop T thoa man
+        T = (E_max - E_mc_now) / e_mc
+        E_mc_now = E_mc_now + T * e_mc
+        E_now = [E_now[j] - T * e[j] if E_now[j] - T * e[j] > 0 else 0 for j, _ in enumerate(node_pos)]
+        time_label = time_label + T
+        #w = getWeightLinearPrograming1()
+        #w = getWeightLinearPrograming2(E_now)
+        w = getWeightLinearPrograming3(E_now, 0.5)
+        #w = getWeightLinearPrograming4(E_now)
+
+        tmp = getCharge(E_mc_now, w)
+        x_not_zero = [(index, item) for index, item in enumerate(tmp) if item > 0]
+        if not x_not_zero:
+            break
+        for index, current in enumerate(x_not_zero):
+            u, xu = current
+            if index == 0:
+                time = time_move[-1][u]
+            else:
+                last = x_not_zero[index - 1]
+                time = time_move[last[0]][u]
+            p = [min(charge[j][u] * xu, E[j] - E_now[j] + (time + xu) * e[j]) if E_now[j] - time * e[j] > 0 else 0 for j, node in enumerate(node_pos)]
+            E_now = [E_now[j] + p[j] - (time + xu) * e[j] if E_now[j] - time * e[j] > 0 else 0 for j, node in enumerate(node_pos)]
+            E_now = [E_now[j] if E_now[j] > 0 else 0 for j, node in enumerate(node_pos)]
+            E_mc_now = E_mc_now - sum(p) - time * e_move
+            time_label = time_label + time + xu
+        u_last, _ = x_not_zero[-1]
+        E_mc_now = E_mc_now - time_move[-1][u_last] * e_move
+        E_now = [E_now[j] - time_move[-1][u_last] * e[j] for j, _ in enumerate(node_pos)]
+        E_now = [E_now[j] if E_now[j] > 0 else 0 for j, _ in enumerate(node_pos)]
+        time_label = time_label + time_move[-1][u_last]
+        print time_label, numNode - countNodeDead(E_now)
+        list_node_dead.append((time_label, numNode - countNodeDead(E_now)))
+    return list_node_dead
+
 # main task
 index = 0
 
-f = open("Greedy_LP3_lifetime.csv", mode="w")
-header = ["Bo Du Lieu", "Co Sac", "Khong Sac"]
+f = open("Greedy/Greedy_LP3_lifetime.csv", mode="w")
+header = ["Bo Du Lieu", "time", "Co Sac", "Khong Sac"]
 writer = csv.DictWriter(f, fieldnames=header)
 writer.writeheader()
-while index < 1:
-    if index == 18:
-        index = index + 1
-        continue
+while index < 27:
+    start_time = tm.time()
     print "Data Set ", index
     getData(file_name="data.csv", index=index)
 
@@ -287,24 +334,33 @@ while index < 1:
     delta = [[charge[j][u] - e[j] for u, _ in enumerate(charge_pos)] for j, _ in enumerate(node_pos)]
     life_time, T, gen, remain = getRound()
 
+    end_time = tm.time()
+
     row = {}
     row["Bo Du Lieu"] = "No." + str(index)
+    row["time"] = end_time - start_time
     row["Co Sac"] = life_time
     row["Khong Sac"] = min([E[j] / e[j] for j, _ in enumerate(node_pos)])
     writer.writerow(row)
     print "Done Data Set ", index
+
+    list_node_dead = getNodeDead()
+    file_name = "Greedy/DataSet" + str(index) + ".csv"
+    g = open(file_name, mode="w")
+    g_header = ["time", "numNode"]
+    g_writer = csv.DictWriter(g, fieldnames=g_header)
+    g_writer.writeheader()
+    for item in list_node_dead:
+        g_row = {}
+        g_row["time"] = item[0]
+        g_row["numNode"] = item[1]
+        g_writer.writerow(g_row)
+    g.close()
+
     index = index + 1
 
 f.close()
 print "Done All"
-
-"""print life_time
-for item in T:
-    print item,
-print
-for item in gen:
-    print item
-print remain"""
 
 
 

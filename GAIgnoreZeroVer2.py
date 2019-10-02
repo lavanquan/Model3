@@ -551,7 +551,7 @@ def evolution(maxIterator, pc, pm, m_ran, m_uni, w):
     nbIte = 0
     t = 0
     while t < maxIterator and nbIte < 200:
-        #print "t = ", t, "Fitness = ", population[0]["fitness"]
+        print "t = ", t, "Fitness = ", population[0]["fitness"]
         count = 0 # dem so lan mutation
         nproc = cpu_count()
         process = []
@@ -614,14 +614,14 @@ def test(indi):
         print "E_mc = ", round(E_mc_now, 2), "min E = ", round(min(E_now), 2), "max E = ", round(max(E_now), 2)
 
 # main task
-index = 0
+index = 21
 
 f = open("temp.csv", mode="w")
 header = ["Bo Du Lieu", "Co Sac", "Khong Sac"]
 writer = csv.DictWriter(f, fieldnames=header)
 writer.writeheader()
 
-while index < 1:
+while index < 22:
     print "Data Set ", index
 
     file_name = "GA/DataSet" + str(index) + ".csv"
@@ -632,7 +632,7 @@ while index < 1:
 
     sum_lifetime = 0.0
     sum_time = 0.0
-    for idRun in range(10):
+    for idRun in range(1):
         start_time = time.time()
 
         random.seed(idRun)
