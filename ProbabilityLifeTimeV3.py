@@ -66,7 +66,7 @@ def getData(file_name="data.csv", index=0):
     e_move = df.e_move[index]
     alpha = df.alpha[index]
     beta = df.beta[index]
-    E_thred = 0.4 * E[0]
+    E_thred = 0.6 * E[0]
 
     charge_extend = []
     charge_extend.extend(charge_pos)
@@ -126,7 +126,7 @@ def getProb(queue, current, t, lamda):
         j, Ej, tj = item
         next_u = near_charge[j]  # diem sac gan nhat cua node j
         if current != -1:
-            temp[k] = (j, Ej, tj, 1 - lamda * Ej / E_thred - (1 - lamda) * distance(charge_pos[current], charge_pos[next_u]) / (math.sqrt(2) * 1000))
+            temp[k] = (j, Ej, tj, 1 - lamda * Ej / E_thred - (1 - lamda) * distance((0, 0), charge_pos[next_u]) / (math.sqrt(2) * 1000))
         else:
             temp[k] = (j, Ej, tj, 1 - lamda * Ej / E_thred - (1 - lamda) * distance((0.0, 0.0), charge_pos[next_u]) / (
             math.sqrt(2) * 1000))
@@ -138,11 +138,11 @@ def life_time(lamda):
     queue = [] # queue se luu vi tri va nang luong con lai cua node, moi phan tu se co cau truc la (j, E[j])
     E_now = copy.copy(E)
     E_mc_now = E_mc
-    current = -1 # vi tri hien tai cua MC, khoi tao tai vi tri co toa do (0, 0)
+    current = (0.0, 0.0) # vi tri hien tai cua MC, khoi tao tai vi tri co toa do (0, 0)
     t = 0.0
 
     while min(E_now) > 0.01:
-        print "t = ", t, min(E_now), E_mc_now
+        #print "t = ", t, min(E_now), E_mc_now
         queue = []
         for j, node in enumerate(node_pos):
             if E_now[j] <= E_thred:
@@ -156,9 +156,9 @@ def life_time(lamda):
         if E_mc_now <= E_min: # neu nang luong cua MC khong du de di chuyen
             #print "Throw 1"
             #break
-            E_mc_now = E_mc_now - time_move[-1][current]
+            E_mc_now = E_mc_now - distance((0.0, 0.0), current) / velocity
             time_charge = (E_max - E_mc_now) / e_mc
-            delta_t = time_move[-1][current] + time_charge
+            delta_t = distance((0.0, 0.0), current) / velocity + time_charge
             temp_E_now = [E_now[j] - delta_t * e[j] for j, _ in enumerate(node_pos)]
             if min(temp_E_now) < 0.01:
                 t = t + min([E_now[j] / e[j] for j, _ in enumerate(node_pos)])
@@ -167,17 +167,17 @@ def life_time(lamda):
                 t = t + delta_t
                 E_now = temp_E_now
                 E_mc_now = E_max
-                current = -1
+                current = (0.0, 0.0)
                 continue
         else: # neu nang luong cua MC du de di chuyen
             #print "Throw 2"
             queue = getProb(queue=queue, current=current, t=t, lamda=lamda)
             j_now, Ej, tj, pj = queue[0]
-            u_now = near_charge[j_now]
-            if current != -1:
-                delta_t = distance(charge_pos[current], charge_pos[u_now]) / velocity # thoi gian di chuyen den vi tri sac
+            u_now = j_now
+            if current != (0.0, 0.0):
+                delta_t = distance(current, node_pos[u_now]) / velocity # thoi gian di chuyen den vi tri sac
             else:
-                delta_t = distance((0.0, 0.0), charge_pos[u_now]) / velocity  # thoi gian di chuyen den vi tri sac
+                delta_t = distance((0.0, 0.0), node_pos[u_now]) / velocity  # thoi gian di chuyen den vi tri sac
             E_mc_now = E_mc_now - delta_t * e_move
             temp_E_now = [E_now[j] - delta_t * e[j] for j, _ in enumerate(node_pos)]
             if min(temp_E_now) < 0.01: #  neu mang chet trong qua trinh MC di chuyen
@@ -185,14 +185,14 @@ def life_time(lamda):
                 break
             else: # neu mang van du nang luong de MC di chuyen toi vi tri j
                 E_now = temp_E_now # nang luong moi cua cac node
-                current = u_now # vi tri moi cua MC
+                current = node_pos[u_now] # vi tri moi cua MC
                 t = t + delta_t
             # kiem tra xem nang luong cua Mc co du de sac khong
             if E_mc_now <= E_min:
                 #print "throw 3"
-                E_mc_now = E_mc_now - time_move[-1][u_now]
+                E_mc_now = E_mc_now - distance((0.0, 0.0), node_pos[u_now]) / velocity
                 time_charge = (E_max - E_mc_now) / e_mc
-                delta_t = time_move[-1][u_now] + time_charge
+                delta_t = distance((0.0, 0.0), node_pos[u_now]) / velocity + time_charge
                 temp_E_now = [E_now[j] - delta_t * e[j] for j, _ in enumerate(node_pos)]
                 if min(temp_E_now) < 0.01:
                     t = t + min([E_now[j] / e[j] for j, _ in enumerate(node_pos)])
@@ -201,16 +201,18 @@ def life_time(lamda):
                     t = t + delta_t
                     E_now = temp_E_now
                     E_mc_now = E_max
-                    current = -1
+                    current = (0, 0)
                     continue
             # neu tat ca cac dieu kien ve nang nuong cua sensor va MC deu pass qua
-            if charge[j_now][u_now] - e[j_now] <= 0:
-                max_t = (E_mc_now - E_min) / charge[j_now][u_now]
+            if charging(node_pos[j_now], node_pos[u_now]) - e[j_now] <= 0:
+                max_t = (E_mc_now - E_min) / charging(node_pos[j_now], node_pos[u_now])
             else:
                 #print (E[j_now] - E_now[j_now])/(charge[j_now][u_now] - e[j_now]), (E_mc_now - E_min) / charge[j_now][u_now]
-                max_t = min((E[j_now] - E_now[j_now])/(charge[j_now][u_now] - e[j_now]), (E_mc_now - E_min) / charge[j_now][u_now])
+                max_t = min((E[j_now] - E_now[j_now])/(charging(node_pos[j_now], node_pos[u_now]) - e[j_now]), (E_mc_now - E_min) / charging(node_pos[j_now], node_pos[u_now]))
             # max_t la thoi gian toi da Mc se dung sac cho node j
-            temp_E_now = [E_now[j] - max_t * e[j] if j != j_now else E_now[j] + max_t * (charge[j][u_now] - e[j]) for j, _ in enumerate(node_pos)]
+            time_to_dead = min([E_now[j] / e[j] for j, _ in enumerate(node_pos) if e[j] > 0])
+            print "time to dead = ", time_to_dead, "max_t = ", max_t, "j_now = ", j_now
+            temp_E_now = [E_now[j] - max_t * e[j] if j != j_now else E_now[j] + max_t * (charging(node_pos[j_now], node_pos[u_now]) - e[j]) for j, _ in enumerate(node_pos)]
             if min(temp_E_now) < 0.01:
                 #print "throw 2.4.1", min(temp_E_now), max_t
                 t = t + min([E_now[j] / e[j] for j, _ in enumerate(node_pos)])
@@ -219,7 +221,7 @@ def life_time(lamda):
                 #print max_t
                 t = t + max_t
                 E_now = temp_E_now
-                E_mc_now = E_mc_now - max_t * (charge[j_now][u_now] - e[j_now])
+                E_mc_now = E_mc_now - max_t * (charging(node_pos[j_now], node_pos[u_now]) - e[j_now])
                 #print "throw 2.4.2", t, min(E_now), E_mc_now
     return t
 
@@ -335,18 +337,18 @@ while index < 5:
     writer.writerow(row)
     print "Done Data Set ", index
 
-    # list_node_dead = getNodeDead(0.5)
-    # file_name = "Compare/DataSet" + str(index) + ".csv"
-    # g = open(file_name, mode="w")
-    # g_header = ["time", "numNode"]
-    # g_writer = csv.DictWriter(g, fieldnames=g_header)
-    # g_writer.writeheader()
-    # for item in list_node_dead:
-    #     g_row = {}
-    #     g_row["time"] = item[0]
-    #     g_row["numNode"] = item[1]
-    #     g_writer.writerow(g_row)
-    # g.close()
+    """list_node_dead = getNodeDead(0.5)
+    file_name = "Compare/DataSet" + str(index) + ".csv"
+    g = open(file_name, mode="w")
+    g_header = ["time", "numNode"]
+    g_writer = csv.DictWriter(g, fieldnames=g_header)
+    g_writer.writeheader()
+    for item in list_node_dead:
+        g_row = {}
+        g_row["time"] = item[0]
+        g_row["numNode"] = item[1]
+        g_writer.writerow(g_row)
+    g.close()"""
 
     index = index + 1
 

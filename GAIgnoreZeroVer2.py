@@ -106,7 +106,7 @@ def genRoundUniform(E_mc_now, E_now):
     x = [0 for u, _ in enumerate(charge_pos)]
     T = 0
     # mang chua nang luong cua cac sensor khi thuc hien chu ki moi
-    eNode = [E_now[j] / e[j] for j, _ in enumerate(node_pos)]
+    eNode = [E_now[j] / e[j] for j, _ in enumerate(node_pos) if e[j] > 0]
     T_max = min(min(eNode), (E_max - E_mc_now) / e_mc)
     T_min = max(0, (sum(E_move) - E_mc_now) / e_mc)
 
@@ -128,7 +128,7 @@ def genRoundRandom(E_mc_now, E_now):
     x = [0 for u, _ in enumerate(charge_pos)]
     T = 0
     # mang chua nang luong cua cac sensor khi thuc hien chu ki moi
-    eNode = [E_now[j] / e[j] for j, _ in enumerate(node_pos)]
+    eNode = [E_now[j] / e[j] for j, _ in enumerate(node_pos) if e[j] > 0]
     T_max = min(min(eNode), (E_max - E_mc_now) / e_mc)
     T_min = max(0, (sum(E_move) - E_mc_now) / e_mc)
 
@@ -364,7 +364,7 @@ def injust(indi):
         eNode = min([temp_E[j] - time_move[-1][u_first] * e[j] for j, _ in enumerate(node_pos)])
 
         if eNode < 0 or temp_E_mc < sum(E_move):
-            off["remain"] = min([E_now[j] / e[j] for j, _ in enumerate(node_pos)])
+            off["remain"] = min([E_now[j] / e[j] for j, _ in enumerate(node_pos) if e[j] > 0])
             """if index == 0:
                 off["remain"] = min([E_now[j] / e[j] for j, _ in enumerate(node_pos)])
             else:
@@ -420,7 +420,7 @@ def injust(indi):
 
     off["num_gen"] = len(off["gen"])
     if off["remain"] == -1:
-        off["remain"] = min([E_now[j] / e[j] for j, _ in enumerate(node_pos)])
+        off["remain"] = min([E_now[j] / e[j] for j, _ in enumerate(node_pos) if e[j] > 0])
     off["fitness"] = fitness(off)
     #   print off["num_gen"]
     return off
@@ -614,14 +614,14 @@ def test(indi):
         print "E_mc = ", round(E_mc_now, 2), "min E = ", round(min(E_now), 2), "max E = ", round(max(E_now), 2)
 
 # main task
-index = 21
+index = 1
 
 f = open("temp.csv", mode="w")
 header = ["Bo Du Lieu", "Co Sac", "Khong Sac"]
 writer = csv.DictWriter(f, fieldnames=header)
 writer.writeheader()
 
-while index < 22:
+while index < 5:
     print "Data Set ", index
 
     file_name = "GA/DataSet" + str(index) + ".csv"
@@ -636,7 +636,7 @@ while index < 22:
         start_time = time.time()
 
         random.seed(idRun)
-        getData(file_name="data.csv", index=index)
+        getData(file_name="thaydoisonode.csv", index=index)
         population_size = 10 * cpu_count()
         charge = [[charging(node, pos) for u, pos in enumerate(charge_pos)] for j, node in enumerate(node_pos)]
         delta = [[charge[j][u] - e[j] for u, _ in enumerate(charge_pos)] for j, _ in enumerate(node_pos)]
