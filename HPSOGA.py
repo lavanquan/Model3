@@ -190,39 +190,49 @@ def crossover(father, mother, T):
     return father_child, mother_child
 
 
+def repair_vector(v):
+    v_dot = copy.copy(v)
+    if len(v_dot) > numNode:
+        v_dot = v_dot[:numNode]
+    if len(v_dot) < numNode:
+        for i in range(numNode-len(v_dot)):
+            v_dot.append(0)
+    return v_dot
+
+
 def add_operate(v2, v1):
-    v = [0 for _ in v2]
-    if len(v1) < len(v2):
-        v1.extend(v2[len(v1):len(v2)])
-    for i, _ in enumerate(v2):
-        if v2[i] == 0:
-            v[i] = v1[i]
+    v1_dot = repair_vector(v1)
+    v2_dot = repair_vector(v2)
+    v = [0 for _ in v2_dot]
+    for i, _ in enumerate(v2_dot):
+        if v2_dot[i] == 0:
+            v[i] = v1_dot[i]
         else:
-            v[i] = v2[i]
+            v[i] = v2_dot[i]
     return v
 
 
 def mul_operate(v1, c):
-    v = [0 for _ in v1]
-    r = [random.random() for _ in v1]
+    v1_dot = repair_vector(v1)
+    v = [0 for _ in v1_dot]
+    r = [random.random() for _ in v1_dot]
     for i, _ in enumerate(v):
         if r[i] >= c:
             v[i] = 0
         else:
-            v[i] = v1[i]
+            v[i] = v1_dot[i]
     return v
 
 
 def sub_operate(x2, x1):
-    if len(x1) < len(x2):
-        x1.extend(x2[len(x1):len(x2)])
-    v = [0 for _ in x2]
-    print len(x2), len(x1)
-    for i, _ in enumerate(x2):
-        if x2[i] == x1[i]:
+    x2_dot = repair_vector(x2)
+    x1_dot = repair_vector(x1)
+    v = [0 for _ in x2_dot]
+    for i, _ in enumerate(x2_dot):
+        if x2_dot[i] == x1_dot[i]:
             v[i] = 0
         else:
-            v[i] = x2[i]
+            v[i] = x2_dot[i]
     return v
 
 
@@ -270,11 +280,11 @@ def evolution(maxIterator, k1, k2, c1, c2, T):
                 if child != -1:
                     population.extend(child)
             i = i + 1
-        # new_population = []
-        # print "pop0 = ", population[0]["travel"]
-        # for i, _ in enumerate(population):
-        #     # print i
-        #     new_population.append(mutation(population[i], c1, c2, T, population[0]["travel"]))
+        new_population = []
+        print "pop0 = ", population[0]["travel"]
+        for i, _ in enumerate(population):
+            # print i
+            new_population.append(mutation(population[i], c1, c2, T, population[0]["travel"]))
         population = selectionBest(population)
         print population[0]["fitness"]
         if population[0]["fitness"] - bestFitness >= 10**-3:
