@@ -339,13 +339,13 @@ def getNodeDead():
 
 
 # main task
-index = 5
+index = 0
 
 f = open("Greedy/Greedy_LP3_lifetime.csv", mode="w")
 header = ["Bo Du Lieu", "time", "Co Sac", "Khong Sac"]
 writer = csv.DictWriter(f, fieldnames=header)
 writer.writeheader()
-while index < 7:
+while index < 1:
     start_time = tm.time()
     print "Data Set ", index
     getData(file_name="Data_Model3_Journal/thaydoisodiemsac.csv", index=index)
